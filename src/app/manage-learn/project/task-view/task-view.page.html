@@ -1,5 +1,5 @@
 <ion-content *ngIf="task" class="ion-padding background-theme-color">
-  <div class="heading-name" (click)="task.isDeletable && edit('task',task?.name)">
+  <div class="heading-name" (click)="task?.isDeletable && edit('task',task?.name)">
    <h4 *ngIf="editField != 'name'">{{task?.name}}</h4>
     <ion-icon *ngIf="task.isDeletable" name="create" color="primary" class="iconAdj"> </ion-icon>
   </div>

@@ -394,7 +394,7 @@ export class TaskViewPage {
   }
 
   checkDisabled() {
-    if (this.task.type == "assessment" || this.task.type == "observation" || this.task.children?.length) {
+    if (this.task.type == "assessment" || this.task.type == "observation") {
       return this.subTaskCount == 0 || this.subTaskCount == undefined || this.subTaskCount > 0; // disabled all the time 
     } else {
       return this.subTaskCount > 0;

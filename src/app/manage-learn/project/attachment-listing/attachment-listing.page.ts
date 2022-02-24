@@ -1,7 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { AppHeaderService } from '@app/services';
 import { DbService } from '../../core/services/db.service';
-import { Platform } from "@ionic/angular";
+import { AlertController, Platform } from "@ionic/angular";
 import { File } from "@ionic-native/file/ngx";
 import { DomSanitizer } from "@angular/platform-browser";
 import { Subscription } from 'rxjs';
@@ -11,7 +11,7 @@ import { FileTransfer, FileTransferObject } from '@ionic-native/file-transfer/ng
 import { FileOpener } from '@ionic-native/file-opener/ngx';
 import { PhotoViewer } from '@ionic-native/photo-viewer/ngx';
 import { ActivatedRoute } from '@angular/router';
-import { UtilsService } from '../../core';
+import { ProjectService, UtilsService } from '../../core';
 
 @Component({
   selector: 'app-attachment-listing',
@@ -47,7 +47,9 @@ export class AttachmentListingPage implements OnInit {
     public fileOpener: FileOpener,
     private photoViewer: PhotoViewer,
     private routeParam: ActivatedRoute,
-    private util: UtilsService
+    private util: UtilsService,
+    private projectService: ProjectService,
+    private alertController: AlertController
   ) {
     routeParam.params.subscribe(parameters => {
       this.projectId = parameters.id;
@@ -98,6 +100,50 @@ export class AttachmentListingPage implements OnInit {
     }
   }
   getAttachments(tab) {
+    this.attachments = [];
+    this.db.query({ _id: this.projectId }).then(success => {
+      this.project = success.docs.length ? success.docs[0] : {};
+      this.projectcopy = { ...this.project }
+      if (this.project.tasks && this.project.tasks.length) {
+        for (const task of this.project.tasks) {
+          const attachments = [];
+          const remarks=[];
+          if (!task.isDeleted) {
+            console.log("task",task);
+            if(task.remarks){
+              let remarksObj = {
+                taskName: task.name,
+                remarks: task.remarks,
+              }
+              remarks.push({ ...remarksObj})
+            }
+            if (task.attachments && task.attachments.length) {
+              for (const element of task.attachments) {
+                if (compare(element.type, tab.type)) {
+                  element.localUrl = this.win.Ionic.WebView.convertFileSrc(
+                    this.path+ element.name
+                  );
+                  attachments.push(element);
+                }
+              }
+              if (attachments.length) {
+                let attachmentObj = task;
+                this.attachments.push({ ...attachmentObj });
+              }
+              if(remarks.length){
+                this.attachments.remarks = remarks
+              }
+            }
+          }
+        }
+      }
+      function compare(fileType, tabType): boolean {
+        tabType = tabType.substr(0, tabType.indexOf("/"));
+        fileType = fileType.substr(0, fileType.indexOf("/"));
+        return tabType == fileType;
+      }
+    }, error => {
+    })
   }
 
   getImgContent(file) {
@@ -124,5 +170,34 @@ export class AttachmentListingPage implements OnInit {
     this.fileOpener.open(this.path + '/' + attachment.name, attachment.type)
       .then(() => { console.log('File is opened'); })
       .catch(e => console.log('Error opening file', e));
+  }
+  
+  async removeImage(task, type, index){
+    const alert = await this.alertController.create({
+      message: '<strong>Are you sure you want to delete image?</strong>',
+      buttons: [
+        {
+          text: 'Yes',
+          cssClass: 'alert-button button-blue',
+          role: 'yes',
+          handler: () => {
+            this.attachments = this.attachments.map(obj => {
+              if (obj === task) {
+                obj.attachments.splice(index, 1)
+                return obj
+              }
+            return obj;
+            });
+          }
+        },
+        {
+          text: 'No',
+          cssClass: 'alert-button button-white',
+          role: 'no',
+        }
+      ]
+    });
+
+    await alert.present();
   }
 }

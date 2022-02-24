@@ -100,50 +100,6 @@ export class AttachmentListingPage implements OnInit {
     }
   }
   getAttachments(tab) {
-    this.attachments = [];
-    this.db.query({ _id: this.projectId }).then(success => {
-      this.project = success.docs.length ? success.docs[0] : {};
-      this.projectcopy = { ...this.project }
-      if (this.project.tasks && this.project.tasks.length) {
-        for (const task of this.project.tasks) {
-          const attachments = [];
-          const remarks=[];
-          if (!task.isDeleted) {
-            console.log("task",task);
-            if(task.remarks){
-              let remarksObj = {
-                taskName: task.name,
-                remarks: task.remarks,
-              }
-              remarks.push({ ...remarksObj})
-            }
-            if (task.attachments && task.attachments.length) {
-              for (const element of task.attachments) {
-                if (compare(element.type, tab.type)) {
-                  element.localUrl = this.win.Ionic.WebView.convertFileSrc(
-                    this.path+ element.name
-                  );
-                  attachments.push(element);
-                }
-              }
-              if (attachments.length) {
-                let attachmentObj = task;
-                this.attachments.push({ ...attachmentObj });
-              }
-              if(remarks.length){
-                this.attachments.remarks = remarks
-              }
-            }
-          }
-        }
-      }
-      function compare(fileType, tabType): boolean {
-        tabType = tabType.substr(0, tabType.indexOf("/"));
-        fileType = fileType.substr(0, fileType.indexOf("/"));
-        return tabType == fileType;
-      }
-    }, error => {
-    })
   }
 
   getImgContent(file) {
@@ -173,31 +129,37 @@ export class AttachmentListingPage implements OnInit {
   }
   
   async removeImage(task, type, index){
+    let texts: any;
+    this.translate.get(['FRMELEMNTS_LBL_DELETE_ATTACHMENT', 'FRMELEMNTS_LBL_YES', 'FRMELEMNTS_LBL_NO']).subscribe(text => {
+      texts = text;
+    })
     const alert = await this.alertController.create({
-      message: '<strong>Are you sure you want to delete image?</strong>',
+      message: texts['FRMELEMNTS_LBL_DELETE_ATTACHMENT'],
       buttons: [
         {
-          text: 'Yes',
-          cssClass: 'alert-button button-blue',
-          role: 'yes',
-          handler: () => {
-            this.attachments = this.attachments.map(obj => {
-              if (obj === task) {
-                obj.attachments.splice(index, 1)
-                return obj
-              }
-            return obj;
-            });
+          text: texts['FRMELEMNTS_LBL_YES'],
+          role: texts['FRMELEMNTS_LBL_YES'],
+          handler: async () => {
+            this.attachments = await this.removeImageFromAttachments(task, index)
           }
         },
         {
-          text: 'No',
-          cssClass: 'alert-button button-white',
-          role: 'no',
+          text: texts['FRMELEMNTS_LBL_NO'],
+          role: texts['FRMELEMNTS_LBL_NO'],
         }
       ]
     });
 
     await alert.present();
+  }
+  removeImageFromAttachments(task, index): any {
+    let newArray = this.attachments.map(obj => {
+      if (obj === task) {
+        obj.attachments.splice(index, 1)
+        return obj
+      }
+      return obj;
+    })
+    return newArray;
   }
 }
